@@ -102,18 +102,3 @@ This will generate:
 ## 📄 License
 
 This project is licensed under the MIT License.
-```
-
----
-
-## ✅ Dicas Finais
-
-- Para subir os arquivos ao GitHub:
-```bash
-git clone https://github.com/seuusuario/waveguide-solver.git
-cd waveguide-solver
-cp (seus arquivos).cpp/h .
-git add .
-git commit -m "Initial commit with FEM and EFGM"
-git push
-```
