@@ -230,8 +230,14 @@ std::cout << "Trace K: " << traceK << ", Trace M: " << traceM << "\n";
 
 eigenvalues.resize(n);
 
-int info = LAPACKE_dsygv(LAPACK_ROW_MAJOR, 1, 'V', 'U', n,
-K, n, M, n, eigenvalues.data());
+//int info = LAPACKE_dsygv(LAPACK_ROW_MAJOR, 1, 'V', 'U', n,
+//K, n, M, n, eigenvalues.data());
+
+int info = LAPACKE_dsygvd(LAPACK_ROW_MAJOR, 1, 'V', 'U', n,
+    K, n, M, n, eigenvalues.data());
+
+    int info = LAPACKE_dsygvx(LAPACK_ROW_MAJOR, 1, 'V', 'V', 'U', n,
+        K, n, M, n, M_PI * M_PI, 10.0 * M_PI * M_PI, 0, 0, 1e-8, eigenvalues.data());
 
 if (info > 0) {
 std::cerr << "A matriz não pôde ser diagonalizada.\n";

@@ -29,6 +29,7 @@ int main() {
     std::cout << "Primeiros autovalores (k^2):\n";
     for (size_t i = 0; i < std::min(filtered.size(), size_t(10)); ++i) {
         std::cout << "λ[" << i + 1 << "] = " << filtered[i] << std::endl;
+        std::cout << "Kc[" << i + 1 << "] = " << sqrt(filtered[i]) << std::endl;
     }
     // Exibe os primeiros autovalores (k^2)
 //    std::cout << "Primeiros autovalores (k^2):\n";
@@ -39,7 +40,7 @@ int main() {
     // Salvar autovalores
 std::ofstream out("autovalores_fem.txt");
 for (double val : eigenvalues)
-    out << (sqrt(val) / 2.0)  << "\n";
+    out << (sqrt(val))  << "\n";
 
     return 0;
 }
