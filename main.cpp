@@ -7,8 +7,8 @@
 
 int main() {
     // Dimensões do guia de onda
-    double a = 1.0; // largura
-    double b = 0.5; // altura
+    double a = 8.0; // largura
+    double b = 4.0; // altura
     int nx = 81;    // número de elementos em x
     int ny = 41;     // número de elementos em y
 
@@ -21,15 +21,15 @@ int main() {
     solve_generalized_eigenproblem(K, M, eigenvalues);
     std::vector<double> filtered;
     for (double val : eigenvalues) {
-        if (val > 1.1) // ignora autovalores triviais = 1
+        if (val > 0.00001) // ignora autovalores triviais = 1
             filtered.push_back(val);
     }
     
     // Exibir os primeiros valores relevantes
     std::cout << "Primeiros autovalores (k^2):\n";
     for (size_t i = 0; i < std::min(filtered.size(), size_t(10)); ++i) {
-        std::cout << "λ[" << i + 1 << "] = " << filtered[i] << std::endl;
-        std::cout << "Kc[" << i + 1 << "] = " << sqrt(filtered[i]) << std::endl;
+        std::cout << "λ[" << i + 1 << "] = " << filtered[i] << "\t";
+        std::cout << "Kc[" << i + 1 << "] = " << sqrt(filtered[i]) * a << std::endl;
     }
     // Exibe os primeiros autovalores (k^2)
 //    std::cout << "Primeiros autovalores (k^2):\n";
