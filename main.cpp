@@ -2,14 +2,15 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cmath>
 #include "fem_solver.h"
 
 int main() {
     // Dimensões do guia de onda
     double a = 1.0; // largura
     double b = 0.5; // altura
-    int nx = 41;    // número de elementos em x
-    int ny = 21;     // número de elementos em y
+    int nx = 81;    // número de elementos em x
+    int ny = 41;     // número de elementos em y
 
     // Geração da malha e das matrizes FEM
     std::vector<std::vector<double>> K, M;
@@ -38,7 +39,7 @@ int main() {
     // Salvar autovalores
 std::ofstream out("autovalores_fem.txt");
 for (double val : eigenvalues)
-    out << val << "\n";
+    out << (sqrt(val) / 2.0)  << "\n";
 
     return 0;
 }
