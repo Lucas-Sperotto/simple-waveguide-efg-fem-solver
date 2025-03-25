@@ -184,7 +184,7 @@ void generate_fem_matrices(double a, double b, int nx, int ny,
                 }
         }
     }
-
+/*
     // Aplicar condições de contorno de Dirichlet homogêneas (φ = 0)
     for (int j = 0; j < npy; ++j) {
         for (int i = 0; i < npx; ++i) {
@@ -199,6 +199,7 @@ void generate_fem_matrices(double a, double b, int nx, int ny,
             }
         }
     }
+*/
 }
 
 void solve_generalized_eigenproblem(const vector<vector<double>>& K_mat,
