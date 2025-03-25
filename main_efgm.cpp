@@ -28,7 +28,7 @@ int main() {
 
 
     // Salvar autovalores
-std::ofstream out("autovalores_fem.txt");
+std::ofstream out("autovalores_efgm.txt");
 for (double val : eigenvalues)
     out << val << "\n";    
     return 0;
