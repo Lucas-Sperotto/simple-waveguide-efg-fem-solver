@@ -6,8 +6,8 @@
 
 int main() {
     // Dimensões do guia de onda
-    double a = 2.0;
-    double b = 1.0;
+    double a = 1.0;
+    double b = 0.5;
     int nx = 80; // pontos em x
     int ny = 40;  // pontos em y
 
@@ -32,7 +32,7 @@ int main() {
     std::cout << "Primeiros autovalores (k^2):\n";
     for (size_t i = 0; i < std::min(filtered.size(), size_t(10)); ++i) {
         std::cout << "λ[" << i + 1 << "] = " << filtered[i] << "\t";
-        std::cout << "Kc[" << i + 1 << "] = " << sqrt(filtered[i]) << std::endl;
+        std::cout << "ar * Kc[" << i + 1 << "] = " << sqrt(filtered[i] * a) << std::endl;
     }
    // std::cout << "Autovalores (k²) via EFGM:\n";
   //  for (size_t i = 0; i < std::min(eigenvalues.size(), size_t(5)); ++i)
@@ -41,7 +41,7 @@ int main() {
 
     // Salvar autovalores
 std::ofstream out("autovalores_efgm.txt");
-for (double val : eigenvalues)
-    out << val << "\n";    
+for (double val : filtered)
+    out << (sqrt(val) * a) << "\n";    
     return 0;
 }

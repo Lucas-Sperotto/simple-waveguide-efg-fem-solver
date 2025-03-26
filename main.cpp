@@ -7,10 +7,10 @@
 
 int main() {
     // Dimensões do guia de onda
-    double a = 8.0; // largura
-    double b = 4.0; // altura
-    int nx = 81;    // número de elementos em x
-    int ny = 41;     // número de elementos em y
+    double a = 1.0; // largura
+    double b = 0.5; // altura
+    int nx = 29;    // número de elementos em x
+    int ny = 15;     // número de elementos em y
 
     // Geração da malha e das matrizes FEM
     std::vector<std::vector<double>> K, M;
@@ -21,7 +21,7 @@ int main() {
     solve_generalized_eigenproblem(K, M, eigenvalues);
     std::vector<double> filtered;
     for (double val : eigenvalues) {
-        if (val > 0.00001) // ignora autovalores triviais = 1
+        if (val > 1.00001) // ignora autovalores triviais = 1
             filtered.push_back(val);
     }
     
@@ -29,7 +29,7 @@ int main() {
     std::cout << "Primeiros autovalores (k^2):\n";
     for (size_t i = 0; i < std::min(filtered.size(), size_t(10)); ++i) {
         std::cout << "λ[" << i + 1 << "] = " << filtered[i] << "\t";
-        std::cout << "Kc[" << i + 1 << "] = " << sqrt(filtered[i]) * a << std::endl;
+        std::cout << "ar * Kc[" << i + 1 << "] = " << sqrt(filtered[i]) * a << std::endl;
     }
     // Exibe os primeiros autovalores (k^2)
 //    std::cout << "Primeiros autovalores (k^2):\n";
@@ -39,8 +39,8 @@ int main() {
 
     // Salvar autovalores
 std::ofstream out("autovalores_fem.txt");
-for (double val : eigenvalues)
-    out << (sqrt(val))  << "\n";
+for (double val : filtered)
+    out << (sqrt(val) * a ) << "\n";
 
     return 0;
 }

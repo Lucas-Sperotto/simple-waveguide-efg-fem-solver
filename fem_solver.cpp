@@ -1,6 +1,137 @@
 // fem_solver.cpp
 #include "fem_solver.h"
 #include <iostream>
+#include <vector>
+#include <cmath>
+#include <lapacke.h>
+
+using std::vector;
+
+void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4][4]) {
+    double A = hx * hy;
+
+    double valK = 1.0 / A;
+    double Ke_template[4][4] = {
+        { 2, -1, -1,  0},
+        {-1,  2,  0, -1},
+        {-1,  0,  2, -1},
+        { 0, -1, -1,  2}
+    };
+
+    double valM = A / 36.0;
+    double Me_template[4][4] = {
+        {4, 2, 2, 1},
+        {2, 4, 1, 2},
+        {2, 1, 4, 2},
+        {1, 2, 2, 4}
+    };
+
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            Ke[i][j] = valK * Ke_template[i][j];
+            Me[i][j] = valM * Me_template[i][j];
+        }
+}
+
+void generate_fem_matrices(double a, double b, int nx, int ny,
+                           vector<vector<double>>& K, vector<vector<double>>& M) {
+    int npx = nx + 1;
+    int npy = ny + 1;
+    int ndof = npx * npy;
+
+    K.assign(ndof, vector<double>(ndof, 0.0));
+    M.assign(ndof, vector<double>(ndof, 0.0));
+
+    double hx = a / nx;
+    double hy = b / ny;
+
+    double Ke[4][4], Me[4][4];
+    compute_element_matrices(hx, hy, Ke, Me);
+
+    for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+            int n0 = j * npx + i;
+            int n1 = n0 + 1;
+            int n2 = n0 + npx;
+            int n3 = n2 + 1;
+            int nodes[4] = {n0, n1, n3, n2};
+
+            for (int m = 0; m < 4; ++m)
+                for (int n = 0; n < 4; ++n) {
+                    K[nodes[m]][nodes[n]] += Ke[m][n];
+                    M[nodes[m]][nodes[n]] += Me[m][n];
+                }
+        }
+    }
+
+    for (int j = 0; j < npy; ++j) {
+        for (int i = 0; i < npx; ++i) {
+            if (i == 0 || i == npx - 1 || j == 0 || j == npy - 1) {
+                int idx = j * npx + i;
+                for (int k = 0; k < ndof; ++k) {
+                    K[idx][k] = 0.0;
+                    K[k][idx] = 0.0;
+                    M[idx][k] = 0.0;
+                    M[k][idx] = 0.0;
+                }
+                K[idx][idx] = 1.0;
+                M[idx][idx] = 0.0; // corretíssimo
+            }
+        }
+    }
+}
+
+void solve_generalized_eigenproblem(const vector<vector<double>>& K_mat,
+    const vector<vector<double>>& M_mat,
+    vector<double>& eigenvalues) {
+
+    int n = K_mat.size();
+    if (n == 0 || K_mat[0].size() != n) {
+        std::cerr << "Matrizes inválidas!\n";
+        return;
+    }
+
+    double* K = new double[n * n];
+    double* M = new double[n * n];
+
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j) {
+            K[i * n + j] = K_mat[i][j];
+            M[i * n + j] = M_mat[i][j];
+        }
+
+    // Estabilização: evitar singularidade numérica
+    for (int i = 0; i < n; ++i) {
+        if (M[i * n + i] == 0.0)
+            M[i * n + i] = 1e-12;
+    }
+
+    eigenvalues.resize(n);
+    int info = LAPACKE_dsygvd(LAPACK_ROW_MAJOR, 1, 'V', 'U', n,
+        K, n, M, n, eigenvalues.data());
+
+    if (info > 0) {
+        std::cerr << "A matriz n\xC3\xA3o p\xC3\xB4de ser diagonalizada.\n";
+    } else if (info < 0) {
+        std::cerr << "Erro no argumento " << -info << " da chamada LAPACKE_dsygv.\n";
+    }
+
+    delete[] K;
+    delete[] M;
+}
+/*
+
+
+
+
+
+
+
+
+
+// fem_solver.cpp
+#include "fem_solver.h"
+#include <iostream>
 #include <cmath>
 #include <cstring> // memcpy
 #include <lapacke.h>
@@ -35,9 +166,38 @@ void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4
             Me[i][j] = valM * Me_template[i][j];
         }
 }
-*/
+
+
 #include <array>
 #include <cmath>
+
+
+void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4][4]) {
+    double A = hx * hy;
+
+    double valK = 1.0 / A;
+    double Ke_template[4][4] = {
+        { 2, -1, -1,  0},
+        {-1,  2,  0, -1},
+        {-1,  0,  2, -1},
+        { 0, -1, -1,  2}
+    };
+
+    double valM = A / 36.0;
+    double Me_template[4][4] = {
+        {4, 2, 2, 1},
+        {2, 4, 1, 2},
+        {2, 1, 4, 2},
+        {1, 2, 2, 4}
+    };
+
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            Ke[i][j] = valK * Ke_template[i][j];
+            Me[i][j] = valM * Me_template[i][j];
+        }
+}
+
 
 // Funções de forma e derivadas no espaço natural (ξ, η)
 void shape_functions(double xi, double eta,
@@ -59,7 +219,7 @@ void shape_functions(double xi, double eta,
     dN_deta[2] =  0.25 * (1 + xi);
     dN_deta[3] =  0.25 * (1 - xi);
 }
-
+/*
 void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4][4]) {
     const double gauss_pts[2] = { -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0) };
     const double weights[2] = { 1.0, 1.0 };
@@ -117,7 +277,7 @@ void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4
     }
 }
 
-
+*/
 /*
 void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4][4]) {
     double hx2 = hx * hx;
@@ -151,7 +311,7 @@ void compute_element_matrices(double hx, double hy, double Ke[4][4], double Me[4
             Me[i][j] = factorM * Mtemplate[i][j];
         }
 }
-*/
+
 void generate_fem_matrices(double a, double b, int nx, int ny,
                            vector<vector<double>>& K, vector<vector<double>>& M) {
     int npx = nx + 1;
@@ -175,7 +335,7 @@ void generate_fem_matrices(double a, double b, int nx, int ny,
             int n2 = n0 + npx;
             int n3 = n2 + 1;
 
-            int nodes[4] = {n0, n1, n2, n3};
+            int nodes[4] = {n0, n1, n3, n2};
 
             for (int m = 0; m < 4; ++m)
                 for (int n = 0; n < 4; ++n) {
@@ -185,17 +345,24 @@ void generate_fem_matrices(double a, double b, int nx, int ny,
         }
     }
 
+
     // Aplicar condições de contorno de Dirichlet homogêneas (φ = 0)
     for (int j = 0; j < npy; ++j) {
         for (int i = 0; i < npx; ++i) {
             if (i == 0 || i == npx - 1 || j == 0 || j == npy - 1) {
                 int idx = j * npx + i;
                 for (int k = 0; k < ndof; ++k) {
-                    K[idx][k] = K[k][idx] = 0.0;
-                    M[idx][k] = M[k][idx] = 0.0;
+                    K[idx][k] = 0.0;
+                    K[k][idx] = 0.0;
+                    M[idx][k] = 0.0;
+                    M[k][idx] = 0.0;
                 }
                 K[idx][idx] = 1.0;
-                M[idx][idx] = 1.0;
+                M[idx][idx] = 0.0;
+
+                // Verificação:
+    std::cout << "M[" << idx << "][" << idx << "] = " << M[idx][idx] << "\n";
+
             }
         }
     }
@@ -248,3 +415,4 @@ std::cerr << "Erro no argumento " << -info << " da chamada LAPACKE_dsygv.\n";
 delete[] K;
 delete[] M;
 }
+*/
