@@ -185,15 +185,173 @@ def solve_modes_with_gmsh(radius=0.01, mode='TM', num_modes=6, filename='teste01
 
     # === Geração dos gráficos ===
     for q in range(num_modes):
-        plt.figure()
+        plt.figure(figsize=(6, 5))
         plt.tricontourf(points[:, 0], points[:, 1], triangles, modos[q], levels=100, cmap='jet')
-        plt.colorbar()
+        plt.colorbar(label='Amplitude')
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
         plt.axis('equal')
+        plt.title(f"Modo {q+1} - {mode}\nfc = {fc[q]/1e9:.3f} GHz | kc·r = {kc[q]*radius:.3f}")
+#plt.title(f"Modo {q+1} - {mode}\nfc = {fc[q]/1e9:.3f} GHz | kc·r = {kc[q] * radius:.3f}")
         plt.tight_layout()
-        plt.title(f"Modo {q+1} - {mode} | fc = {fc[q]/1e9:.3f} GHz")
         fig_path = os.path.join(save_path, f"modo_{q+1}_{mode}.png")
         plt.savefig(fig_path, dpi=300)
         plt.close()
+
+
+
+
+
+    # === Pasta para gráficos vetoriais ===
+    save_path_quiver = f"out/img/quiver_{mode.lower()}_{filename}"
+    os.makedirs(save_path_quiver, exist_ok=True)
+
+    # === Calcula gradiente e gera quiver plot para cada modo ===
+    from scipy.spatial import cKDTree
+
+    tree = cKDTree(points)
+    delta = radius / 1000  # Passo pequeno para estimar derivadas
+
+    # === Novo cálculo vetorial usando interpolação FEM (gradiente por triângulo) ===
+    save_path_quiver = f"out/img/quiver_{mode.lower()}_{filename}"
+    os.makedirs(save_path_quiver, exist_ok=True)
+
+    from scipy.constants import mu_0, pi
+
+    for q in range(num_modes):
+        campo_z = modos[q]
+        Ex = np.zeros(Nn)
+        Ey = np.zeros(Nn)
+        contagem = np.zeros(Nn)  # Contar quantas vezes cada nó participa (para média)
+
+        for tri in triangles:
+            n = tri
+            x = points[n, 0]
+            y = points[n, 1]
+            mat = np.array([[1, x[0], y[0]], [1, x[1], y[1]], [1, x[2], y[2]]])
+            De = np.linalg.det(mat)
+            Ae = abs(De / 2)
+
+            b = np.array([(y[1] - y[2]) / De, (y[2] - y[0]) / De, (y[0] - y[1]) / De])
+            c_ = np.array([(x[2] - x[1]) / De, (x[0] - x[2]) / De, (x[1] - x[0]) / De])
+
+            grad_phi_x = np.dot(campo_z[n], b)  # ∂φ/∂x
+            grad_phi_y = np.dot(campo_z[n], c_)  # ∂φ/∂y
+
+            if mode == 'TM':
+                Ex_local = -grad_phi_y
+                Ey_local = grad_phi_x
+            elif mode == 'TE':
+                kc_local = kc[q] if kc[q] != 0 else 1e-12
+                omega = 2 * pi * fc[q]
+                Z = omega * mu_0 / kc_local
+                Ex_local = -Z * grad_phi_y
+                Ey_local = -Z * grad_phi_x
+
+            for i in n:
+                Ex[i] += Ex_local
+                Ey[i] += Ey_local
+                contagem[i] += 1
+
+        # Média dos valores nos nós
+        Ex /= np.maximum(contagem, 1)
+        Ey /= np.maximum(contagem, 1)
+
+       
+                # Cálculo da magnitude para normalização
+        magnitude = np.sqrt(Ex**2 + Ey**2)
+        nonzero = magnitude > 1e-14
+        Ex_unit = np.zeros_like(Ex)
+        Ey_unit = np.zeros_like(Ey)
+        Ex_unit[nonzero] = Ex[nonzero] / magnitude[nonzero]
+        Ey_unit[nonzero] = Ey[nonzero] / magnitude[nonzero]
+
+        # Coloração pela magnitude original
+        color_data = magnitude
+        
+
+                # === Cálculo da magnitude original dos vetores ===
+        magnitude = np.sqrt(Ex**2 + Ey**2)
+        max_mag = np.max(magnitude)
+
+        # === Normalização de direção dos vetores ===
+        Ex_unit = np.zeros_like(Ex)
+        Ey_unit = np.zeros_like(Ey)
+        nonzero = magnitude > 1e-14
+        Ex_unit[nonzero] = Ex[nonzero] / magnitude[nonzero]
+        Ey_unit[nonzero] = Ey[nonzero] / magnitude[nonzero]
+
+        # === Ajuste de magnitude para visualização ===
+        magnitude_norm = np.zeros_like(magnitude)
+        magnitude_norm[nonzero] = magnitude[nonzero] / max_mag
+        magnitude_scaled = 0.3 + 0.7 * magnitude_norm  # mínimo 30% do vetor máximo
+
+        # === Vetores finais com tamanho ajustado ===
+        Ex_final = Ex_unit * magnitude_scaled
+        Ey_final = Ey_unit * magnitude_scaled
+
+        # === Quiver Plot ===
+        plt.figure(figsize=(6, 5))
+        quiv = plt.quiver(
+            points[:, 0], points[:, 1],
+            Ex_final, Ey_final,
+            magnitude,  # color map by original magnitude
+            cmap='viridis',
+            scale=30, width=0.002, edgecolor='k', linewidth=0.1
+        )
+        plt.colorbar(quiv, label='|Eₜ| (não normalizado)')
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
+
+        # Contorno do guia
+        theta = np.linspace(0, 2 * np.pi, 200)
+        x_circ = radius * np.cos(theta)
+        y_circ = radius * np.sin(theta)
+        plt.plot(x_circ, y_circ, 'k--', linewidth=1)
+
+        plt.title(f"Campo Transversal - Modo {q+1} - {mode}\n"
+                  f"fc = {fc[q]/1e9:.3f} GHz | kc·r = {kc[q]*radius:.3f}")
+        plt.axis('equal')
+        plt.tight_layout()
+        fig_path = os.path.join(save_path_quiver, f"quiver_modo_{q+1}_{mode}.png")
+        plt.savefig(fig_path, dpi=300)
+        plt.close()
+     
+       
+       
+       
+       
+       
+       
+       
+        # === Quiver plot ===
+        #plt.figure(figsize=(6, 5))
+        # Escalonamento automático baseado na magnitude
+        #magnitude = np.sqrt(Ex**2 + Ey**2)
+        #max_magnitude = np.max(magnitude)
+        #if max_magnitude > 0:
+        #    Ex_scaled = Ex / max_magnitude
+        #    Ey_scaled = Ey / max_magnitude
+        #else:
+        #    Ex_scaled = Ex
+       #     Ey_scaled = Ey
+
+        #scale_factor = 20  # Você pode ajustar esse valor conforme o visual desejado
+        #plt.quiver(points[:, 0], points[:, 1], Ex_scaled, Ey_scaled, scale=scale_factor, width=0.002)
+        #plt.xlabel('x (m)')
+        #plt.ylabel('y (m)')
+        #plt.title(f"Campo Transversal - Modo {q+1} - {mode}")
+        #plt.axis('equal')
+        #plt.tight_layout()
+        #fig_path = os.path.join(save_path_quiver, f"quiver_modo_{q+1}_{mode}.png")
+        #plt.savefig(fig_path, dpi=300)
+        #plt.close()
+
+
+
+
+
+
 
     return fc, modos
 
